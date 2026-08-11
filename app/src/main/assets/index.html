@@ -1,0 +1,92 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8"><meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Censo v4.4 - 18 COLS SAP</title>
+<style>
+:root{--p:#1a73e8;--bg:#f0f2f5}body{font-family:Inter; background:var(--bg); margin:0; padding:12px}
+.header{background:#111827; color:#fff; border-radius:16px; padding:14px 18px; display:flex; justify-content:space-between}
+.box{background:#fff; border-radius:16px; padding:16px; box-shadow:0 2px 10px rgba(0,0,0,.06)}
+.top{display:grid; grid-template-columns:1fr 1fr; gap:12px; margin-top:12px}
+.dashGrid{display:grid; grid-template-columns:repeat(4,1fr); gap:10px; margin:14px 0}
+.dash{border-radius:14px; padding:12px; background:#fff; text-align:center; border:2px solid transparent; cursor:pointer}.dash.active{border-color:#1a73e8; background:#eff6ff}
+.dash.n{font-size:22px; font-weight:800}.dash.l{font-size:11px; color:#6b7280; font-weight:700}
+input,button{width:100%; padding:11px; border-radius:10px; border:1px solid #d1d5db; margin-top:6px}
+button{background:#1a73e8; color:#fff; border:none; font-weight:800}button.sec{background:#e5e7eb; color:#111}
+table{width:100%; border-collapse:collapse; font-size:11px}th{position:sticky; top:0; background:#fff; padding:7px; border-bottom:2px solid #eee}td{padding:7px; border-bottom:1px solid #f3f4f6}tr:hover{background:#f8fafc; cursor:pointer}
+.tag{padding:3px 8px; border-radius:7px; font-size:10px; font-weight:800}.CENSADO{background:#dcfce7; color:#166534}.PENDIENTE{background:#fef3c7; color:#92400e}.NUEVO{background:#dbeafe; color:#1e40af}
+#blocker{display:flex; position:fixed; inset:0; background:rgba(17,24,39,.92); z-index:90; align-items:center; justify-content:center; padding:20px; color:#fff; text-align:center}#blocker.hide{display:none}
+#modal{display:none; position:fixed; inset:0; background:rgba(0,0,0,.5); z-index:99; align-items:center; justify-content:center; padding:16px}#modal.show{display:flex}
+.card{background:#fff; width:100%; max-width:560px; border-radius:20px; padding:20px}
+label{font-size:11px; font-weight:800; color:#6b7280; margin-top:8px; display:block}.grid2{display:grid; grid-template-columns:1fr 1fr; gap:10px}
+</style>
+</head>
+<body>
+<div class="header"><div><div style="font-size:17px; font-weight:800">📱 Censo NFT10 - v4.4 18 COLS</div><div style="font-size:11px; color:#9ca3af"><b>CENSO:</b> <span id="h_censo">--</span> | <b>Soc:</b> <span id="h_soc">--</span> | <b>File:</b> <span id="h_file">--</span></div></div><div id="h_status" style="background:#1f2937; border:1px solid #374151; padding:6px 10px; border-radius:20px; font-size:11px">⚠️ Sin EXP</div></div>
+<div id="blocker"><div style="max-width:420px"><div style="font-size:42px">📂</div><h3>EXP de 18 columnas</h3><p style="color:#d1d5db; font-size:13px">CC | INV | SOC |... | DESCRIPCION | MODELO | SERIE<br><br>Ej: EXP-1000121583-D000.DAT</p><input type="file" id="fileInputBlock" accept=".dat,.txt" style="background:#fff; color:#000"></div></div>
+<div class="top">
+ <div class="box"><b>1. EXP 18 COLS (.DAT)</b><input type="file" id="fileInput" accept=".dat,.txt"><div id="info" style="font-size:10px; color:#6b7280; font-family:monospace; margin-top:6px">Esperando...</div><div style="display:flex; gap:6px; margin-top:10px"><input id="scan" placeholder="Escanea INV 00329584 o SERIE" style="flex:1" disabled><button id="btnScan" onclick="scanear()" style="width:80px" disabled>Scan</button></div></div>
+ <div class="box"><b>2. NUEVO (5 campos oficiales)</b><label>INV *</label><input id="f_inv" disabled><label>DESCRIPCION</label><input id="f_desc" disabled><div class="grid2"><div><label>CC</label><input id="f_cc" disabled></div><div><label>RPE (opcional 5)</label><input id="f_rpe" maxlength="5" disabled></div></div><label>SERIE</label><input id="f_serie" disabled><button id="btnNuevo" onclick="guardarNuevo()" disabled style="margin-top:10px">💾 Guardar NUEVO</button></div>
+</div>
+<div class="dashGrid">
+ <div class="dash active" id="d-TOTAL" onclick="setFiltro('TOTAL')"><div class="n" id="c-TOTAL">0</div><div class="l">TOTAL</div></div>
+ <div class="dash" id="d-CENSADO" onclick="setFiltro('CENSADO')"><div class="n" id="c-CENSADO">0</div><div class="l">CENSADOS</div></div>
+ <div class="dash" id="d-PENDIENTE" onclick="setFiltro('PENDIENTE')"><div class="n" id="c-PENDIENTE">0</div><div class="l">PENDIENTES</div></div>
+ <div class="dash" id="d-NUEVO" onclick="setFiltro('NUEVO')"><div class="n" id="c-NUEVO">0</div><div class="l">NUEVOS</div></div>
+</div>
+<div class="box"><div style="display:flex; justify-content:space-between"><b id="titFiltro">TOTAL</b><span id="countList" style="background:#eee; padding:2px 8px; border-radius:10px; font-size:11px">0</span></div><div style="max-height:360px; overflow:auto; margin-top:8px"><table><thead><tr><th>CC</th><th>INV</th><th>Descripcion</th><th>Serie</th><th>Est</th></tr></thead><tbody id="tbody"></tbody></table></div><div style="display:flex; gap:8px; margin-top:10px"><button class="sec" id="btnExp" onclick="exportarIMP()" disabled>📤 Exportar IMP-...DAT</button><button class="sec" onclick="limpiar()">Reset</button></div></div>
+<div id="modal" onclick="if(event.target==this)cerrarModal()"><div class="card"><h3 style="margin:0">Ficha 18 COLS</h3><div id="m_sub" style="font-size:10px; color:#6b7280; font-family:monospace"></div><label>CC (col0)</label><input id="m_cc0"><label>INV (col1)</label><input id="m_inv"><label>DESCRIPCION (col7)</label><input id="m_desc"><label>MODELO (col8)</label><input id="m_modelo"><div class="grid2"><div><label>SERIE (col9)</label><input id="m_serie"></div><div><label>RPE manual</label><input id="m_rpe" maxlength="5"></div></div><label>ESTATUS</label><input id="m_est" disabled><div style="display:flex; gap:8px; margin-top:12px"><button onclick="guardarModal()">Guardar</button><button class="sec" onclick="cerrarModal()">Cerrar</button></div></div></div>
+<script>
+let datos=[], filtro='TOTAL', seleccionado=null, meta={censo:'', soc:''};
+function parseFileName(n){ const m=n.match(/(EXP|IMP)-(\d{10})-([A-Z0-9]{4,5})/i); if(m) return {tipo:m[1].toUpperCase(), censo:m[2], soc:m[3].toUpperCase()}; return null; }
+function handleFile(f){
+ if(!f) return; const p=parseFileName(f.name); if(p){ meta={censo:p.censo, soc:p.soc, fileName:f.name}; } else { meta={censo:'PROV', soc:'', fileName:f.name}; }
+ document.getElementById('h_file').innerText=f.name; document.getElementById('blocker').classList.add('hide');
+ ['scan','f_inv','f_desc','f_cc','f_rpe','f_serie','btnScan','btnNuevo','btnExp'].forEach(id=>document.getElementById(id).disabled=false);
+ const rd=new FileReader();
+ rd.onload=ev=>{
+  const lines=ev.target.result.split(/\r?\n/).filter(x=>x.trim()!='');
+  datos=lines.map(raw=>{
+   const sep = raw.includes('\t')? '\t' : raw.includes('|')? '|' : ';';
+   const c = raw.split(sep).map(x=>x.trim());
+   // 18 COLS OFICIAL: 0=CC 1=INV 2=SOC 3=DATO_MAESTRO 4=CAMPO1 5=TIPO_LLAVE 6=DATO_MAESTRO2 7=DESCRIPCION 8=MODELO 9=SERIE 10=FECHA...
+   if(c.length>=10){
+     return {raw, cc:c[0], num:c[1], soc:c[2], datoM:c[3], campo1:c[4], tipoLlave:c[5], datoM2:c[6], desc:c[7], modelo:c[8], serie:c[9], fechaExp:c[10], origen:'ORIGINAL', estatus:'PENDIENTE', rpe:'', fecha:''};
+   } else {
+     return {raw, cc:'', num:c[0], soc:'', desc:c[2]||'', serie:'', origen:'ORIGINAL', estatus:'PENDIENTE', rpe:'', fecha:''};
+   }
+  }).filter(d=>d.num);
+  if(datos[0]){ meta.soc = p? p.soc : datos[0].soc; }
+  document.getElementById('h_censo').innerText=meta.censo;
+  document.getElementById('h_soc').innerText=meta.soc;
+  document.getElementById('h_status').innerText='✅ '+datos.length;
+  document.getElementById('info').innerText=`18 COLS: ${datos.length} regs | CC:${datos[0]?.cc} INV:${datos[0]?.num} SOC:${datos[0]?.soc} DESC:${(datos[0]?.desc||'').substring(0,25)}`;
+  actualizar();
+ };
+ rd.readAsText(f);
+}
+document.getElementById('fileInput').addEventListener('change', e=>handleFile(e.target.files[0]));
+document.getElementById('fileInputBlock').addEventListener('change', e=>handleFile(e.target.files[0]));
+document.getElementById('scan').addEventListener('keydown', e=>{ if(e.key==='Enter') scanear(); });
+function scanear(){
+ let v=document.getElementById('scan').value.trim(); if(!v) return;
+ let vs=v.replace(/^0+/,'');
+ let o=datos.find(d=>d.num===v || d.num.replace(/^0+/,'')===vs || d.serie===v || d.desc.includes(v));
+ if(o){ o.estatus='CENSADO'; o.fecha=new Date().toLocaleString(); abrirModal(o); }
+ else if(confirm(`No existe ${v} ¿Nuevo?`)){ let n={raw:`NEW\t${v}`, cc:'', num:v, soc:meta.soc, desc:'', modelo:'', serie:'', origen:'NUEVO', estatus:'NUEVO', rpe:'', fecha:new Date().toLocaleString()}; datos.push(n); abrirModal(n); }
+ document.getElementById('scan').value=''; actualizar();
+}
+function guardarNuevo(){ const num=document.getElementById('f_inv').value.trim(); if(!num) return alert('INV'); const rpe=document.getElementById('f_rpe').value.trim(); if(rpe &&!/^[A-Za-z0-9]{5}$/.test(rpe)) return alert('RPE 5'); datos.push({raw:`NEW`, cc:document.getElementById('f_cc').value, num, desc:document.getElementById('f_desc').value, serie:document.getElementById('f_serie').value, rpe, origen:'NUEVO', estatus:'NUEVO', fecha:new Date().toLocaleString()}); ['f_inv','f_desc','f_cc','f_rpe','f_serie'].forEach(id=>document.getElementById(id).value=''); actualizar(); }
+function setFiltro(t){ filtro=t; document.querySelectorAll('.dash').forEach(d=>d.classList.remove('active')); document.getElementById('d-'+t).classList.add('active'); document.getElementById('titFiltro').innerText=t; render(); }
+function getLista(){ if(filtro==='TOTAL') return datos.filter(d=>d.origen==='ORIGINAL'); if(filtro==='CENSADO') return datos.filter(d=>d.estatus==='CENSADO'); if(filtro==='PENDIENTE') return datos.filter(d=>d.origen==='ORIGINAL'&&d.estatus==='PENDIENTE'); return datos.filter(d=>d.origen==='NUEVO'); }
+function actualizar(){ document.getElementById('c-TOTAL').innerText=datos.filter(d=>d.origen==='ORIGINAL').length; document.getElementById('c-CENSADO').innerText=datos.filter(d=>d.estatus==='CENSADO').length; document.getElementById('c-PENDIENTE').innerText=datos.filter(d=>d.origen==='ORIGINAL'&&d.estatus==='PENDIENTE').length; document.getElementById('c-NUEVO').innerText=datos.filter(d=>d.origen==='NUEVO').length; render(); }
+function render(){ const lista=getLista(); document.getElementById('countList').innerText=lista.length; document.getElementById('tbody').innerHTML=lista.map(d=>`<tr onclick="abrirPorNum('${d.num}')"><td>${d.cc}</td><td><b>${d.num}</b></td><td>${(d.desc||'').substring(0,30)}</td><td>${(d.serie||'').substring(0,10)}</td><td><span class="tag ${d.estatus}">${d.origen==='NUEVO'?'NUEVO':d.estatus}</span></td></tr>`).join(''); }
+function abrirPorNum(n){ const o=datos.find(d=>d.num===n); if(o) abrirModal(o); }
+function abrirModal(o){ seleccionado=o; document.getElementById('m_cc0').value=o.cc; document.getElementById('m_inv').value=o.num; document.getElementById('m_desc').value=o.desc; document.getElementById('m_modelo').value=o.modelo||''; document.getElementById('m_serie').value=o.serie; document.getElementById('m_rpe').value=o.rpe; document.getElementById('m_est').value=`${o.origen}/${o.estatus} ${o.fecha||''}`; document.getElementById('m_sub').innerText=`SOC:${o.soc} | ${o.raw.substring(0,100)}...`; document.getElementById('modal').classList.add('show'); }
+function cerrarModal(){ document.getElementById('modal').classList.remove('show'); }
+function guardarModal(){ if(!seleccionado) return; const rpe=document.getElementById('m_rpe').value.trim(); if(rpe &&!/^[A-Za-z0-9]{5}$/.test(rpe)) return alert('RPE 5'); seleccionado.cc=document.getElementById('m_cc0').value; seleccionado.num=document.getElementById('m_inv').value.trim(); seleccionado.desc=document.getElementById('m_desc').value; seleccionado.modelo=document.getElementById('m_modelo').value; seleccionado.serie=document.getElementById('m_serie').value; seleccionado.rpe=rpe; if(seleccionado.origen==='ORIGINAL') seleccionado.estatus='CENSADO'; seleccionado.fecha=new Date().toLocaleString(); actualizar(); cerrarModal(); }
+function exportarIMP(){ const nombre=`IMP-${meta.censo}-${meta.soc}.DAT`; const out=datos.filter(d=>d.estatus==='CENSADO'||d.origen==='NUEVO').map(d=>`${d.cc}\t${d.num}\t${d.soc}\t${d.desc}\t${d.modelo||''}\t${d.serie}\t${d.rpe}\t${d.estatus}\t${d.fecha}`).join('\n'); const blob=new Blob([out],{type:'text/plain'}); const a=document.createElement('a'); a.href=URL.createObjectURL(blob); a.download=nombre; a.click(); }
+function limpiar(){ if(confirm('Resetear?')){ datos.forEach(d=>{ if(d.origen==='ORIGINAL') d.estatus='PENDIENTE'; }); actualizar(); } }
+</script>
+</body>
+</html>
