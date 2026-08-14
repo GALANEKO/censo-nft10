@@ -10,7 +10,6 @@
     <application
         android:allowBackup="true"
         android:requestLegacyExternalStorage="true"
-        android:icon="@mipmap/ic_launcher"
         android:label="Censo NFT10"
         android:theme="@android:style/Theme.NoTitleBar">
         
